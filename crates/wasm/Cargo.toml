@@ -1,0 +1,21 @@
+[package]
+name = "bank2csv-wasm"
+version.workspace = true
+edition.workspace = true
+description = "WebAssembly bindings for bank2csv"
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[features]
+default = ["all-banks"]
+all-banks = ["bank2csv-banks/im_bank_ke"]
+
+[dependencies]
+bank2csv-core.workspace = true
+bank2csv-extract.workspace = true
+bank2csv-banks = { workspace = true, default-features = false }
+serde.workspace = true
+serde_json.workspace = true
+wasm-bindgen = "=0.2.130"
+serde-wasm-bindgen = "0.6"

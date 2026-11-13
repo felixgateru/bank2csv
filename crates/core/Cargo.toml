@@ -1,0 +1,10 @@
+[package]
+name = "bank2csv-core"
+version.workspace = true
+edition.workspace = true
+description = "Canonical model, parser trait, layout helpers, validation and output for bank2csv"
+
+[dependencies]
+serde.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true

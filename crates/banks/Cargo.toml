@@ -1,0 +1,15 @@
+[package]
+name = "bank2csv-banks"
+version.workspace = true
+edition.workspace = true
+description = "Bank-specific statement parsers for bank2csv"
+
+[features]
+default = ["im_bank_ke"]
+im_bank_ke = []
+
+[dependencies]
+bank2csv-core.workspace = true
+
+[dev-dependencies]
+serde_json.workspace = true

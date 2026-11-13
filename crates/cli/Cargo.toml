@@ -1,0 +1,15 @@
+[package]
+name = "bank2csv-cli"
+version.workspace = true
+edition.workspace = true
+description = "Development CLI for bank2csv"
+
+[[bin]]
+name = "bank2csv"
+path = "src/main.rs"
+
+[dependencies]
+bank2csv-core.workspace = true
+bank2csv-extract.workspace = true
+bank2csv-banks = { workspace = true, features = ["im_bank_ke"] }
+serde_json.workspace = true

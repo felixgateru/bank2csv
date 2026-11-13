@@ -1,0 +1,9 @@
+[package]
+name = "bank2csv-extract"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+bank2csv-core.workspace = true
+pdf-extract = "0.12"
+euclid = "0.20"

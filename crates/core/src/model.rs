@@ -1,0 +1,48 @@
+//! The canonical statement model every parser produces.
+
+use crate::{Date, Money};
+use serde::{Deserialize, Serialize};
+
+#[derive(Debug, Clone, PartialEq, Default, Serialize, Deserialize)]
+pub struct Statement {
+    /// Parser id, e.g. `im_bank_ke`.
+    pub bank: String,
+    /// Layout variant within the parser, e.g. `eStatement_2026`.
+    pub layout: String,
+    pub account: Option<String>,
+    /// ISO 4217 code, e.g. `KES`.
+    pub currency: Option<String>,
+    pub period_start: Option<Date>,
+    pub period_end: Option<Date>,
+    pub opening_balance: Option<Money>,
+    pub closing_balance: Option<Money>,
+    /// Control totals printed on the statement (both positive), if any.
+    /// Checked by the validator against the transactions.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub total_debits: Option<Money>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub total_credits: Option<Money>,
+    pub transactions: Vec<Transaction>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct Transaction {
+    pub date: Date,
+    pub value_date: Option<Date>,
+    pub description: String,
+    pub reference: Option<String>,
+    /// Signed: negative is money out (debit), positive is money in (credit).
+    pub amount: Money,
+    /// Balance after this transaction, if the statement shows one.
+    pub balance: Option<Money>,
+    /// Where the row came from, for error messages. Not written to CSV.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub source: Option<SourceRef>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub struct SourceRef {
+    pub page: u32,
+    /// 1-based line index within the page, as grouped by the layout layer.
+    pub line: u32,
+}

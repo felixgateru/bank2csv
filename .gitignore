@@ -1,0 +1,5 @@
+/target
+/pkg
+fixtures/private/
+*.pdf
+!fixtures/_extract/*.pdf
