@@ -169,6 +169,7 @@ fn parse_spans(doc: &SpanDocument) -> Result<Statement> {
             }
             None => return Err(Error::parse_failed(row.page, row.line, "row has no withdrawal or deposit")),
             Some(amount) => stmt.transactions.push(Transaction {
+                transaction_id: None,
                 date: row.date,
                 value_date: row.value_date,
                 description,

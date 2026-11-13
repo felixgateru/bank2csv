@@ -37,7 +37,12 @@ fn private_statements_convert_and_reconcile() {
         if bless {
             std::fs::write(&expected_path, &csv).unwrap();
         } else if let Ok(expected) = std::fs::read_to_string(&expected_path) {
-            assert_eq!(csv, expected, "{stem}: CSV differs from {}", expected_path.display());
+            // Report only the first differing line number, never the content:
+            // these are real statements and test output ends up in logs.
+            if csv != expected {
+                let line = csv.lines().zip(expected.lines()).position(|(a, b)| a != b).unwrap_or(csv.lines().count().min(expected.lines().count()));
+                panic!("{stem}: CSV differs from {} at line {} (diff the files locally; rerun with BLESS=1 if the change is intended)", expected_path.display(), line + 1);
+            }
         }
         eprintln!("{stem}: ok, {} transactions", parsed.meta.transaction_count);
     }

@@ -10,9 +10,24 @@ Writes fixtures/im_bank_ke/email_v1/input.rawdoc.json and expected.csv.
 """
 import json
 import pathlib
+import uuid
 
 CHAR_W = 4.6  # approximate advance of a size-8 Lato digit, in points
 OUT = pathlib.Path("fixtures/im_bank_ke/email_v1")
+
+# Independent implementation of the v1 transaction-id scheme (crates/core/src/ids.rs),
+# so the golden test cross-checks the Rust code.
+ID_NAMESPACE = uuid.UUID("206120a8-825d-4e8c-8080-bf08a9940efc")
+BANK, ACCOUNT = "im_bank_ke", "001XXXXXXX0001"
+_seen = {}
+
+
+def transaction_id(iso_date, amount_minor, balance_minor):
+    base = ["v1", BANK, ACCOUNT, iso_date, str(amount_minor), "bal", str(balance_minor)]
+    key = json.dumps(base, separators=(",", ":"))
+    _seen[key] = _seen.get(key, 0) + 1
+    name = json.dumps(base + [str(_seen[key])], separators=(",", ":"), ensure_ascii=False)
+    return str(uuid.uuid5(ID_NAMESPACE, name))
 
 # Right edges of right-aligned columns, from the real layout.
 WITHDRAWAL_X1, DEPOSIT_X1, BALANCE_X1 = 280.2, 359.1, 448.8
@@ -45,7 +60,7 @@ def account_block(y0, page_no, pages):
         span("JANE DOE - KES ACC", 110.2, y0, 9.0),
         span(f"Page {page_no} Of {pages}", 499.5, y0, 9.0),
         span("Account Number", 16.5, y0 + 15, 9.0),
-        span("001XXXXXXX0001", 110.2, y0 + 15, 9.0),
+        span(ACCOUNT, 110.2, y0 + 15, 9.0),
         span("Account Type", 16.5, y0 + 30, 9.0),
         span("PAYGO-LCY", 110.2, y0 + 30, 9.0),
         span("Statement Period", 357.0, y0 + 40.5, 9.0),
@@ -108,7 +123,8 @@ def rows(txns, y, balance):
         debit = plain(-amount) if amount < 0 else ""
         credit = plain(amount) if amount >= 0 else ""
         iso = lambda d: f"20{d[6:8]}-{d[3:5]}-{d[0:2]}"
-        csv.append(",".join([iso(date), iso(vdate), " ".join(narrative), "", debit, credit, plain(amount), plain(balance)]))
+        tid = transaction_id(iso(date), amount, balance)
+        csv.append(",".join([tid, iso(date), iso(vdate), " ".join(narrative), "", debit, credit, plain(amount), plain(balance)]))
         y += 25.0
     return spans, csv, y, balance
 
@@ -158,7 +174,7 @@ def main():
 
     OUT.mkdir(parents=True, exist_ok=True)
     (OUT / "input.rawdoc.json").write_text(json.dumps({"kind": "spans", "pages": pages}, indent=1, ensure_ascii=False) + "\n")
-    header_row = "date,value_date,description,reference,debit,credit,amount,balance"
+    header_row = "transaction_id,date,value_date,description,reference,debit,credit,amount,balance"
     (OUT / "expected.csv").write_text("\r\n".join([header_row] + csv) + "\r\n")
     print(f"wrote {OUT}/ ({len(csv)} transactions, closing {plain(balance)})")
 

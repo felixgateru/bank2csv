@@ -92,6 +92,7 @@ mod tests {
 
     fn tx(day: u8, amount: i64, balance: Option<i64>) -> Transaction {
         Transaction {
+                transaction_id: None,
             date: Date::new(2026, 10, day).unwrap(),
             value_date: None,
             description: String::new(),

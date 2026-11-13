@@ -1,6 +1,6 @@
 //! Development CLI.
 //!
-//!   bank2csv convert <file> [--bank ID] [--lenient] [--json] [--password-file F]
+//!   bank2csv convert <file> [--bank ID] [--lenient] [--no-ids] [--json] [--password-file F]
 //!   bank2csv dump    <file> [--lines] [--password-file F]   # RawDocument JSON or grouped lines
 //!   bank2csv parse-raw <rawdoc.json> [--bank ID]            # run parsers on a fixture
 //!   bank2csv banks
@@ -80,7 +80,11 @@ fn run(args: &[String]) -> Result<(), String> {
                 let text = std::fs::read_to_string(path).map_err(|e| format!("{path}: {e}"))?;
                 serde_json::from_str(&text).map_err(|e| format!("{path}: {e}"))?
             };
-            let opts = ConvertOptions { bank: value(args, "--bank").map(String::from), lenient: flag(args, "--lenient") };
+            let opts = ConvertOptions {
+                bank: value(args, "--bank").map(String::from),
+                lenient: flag(args, "--lenient"),
+                generate_ids: !flag(args, "--no-ids"),
+            };
             let parsed = registry::parse(&parsers, &doc, &opts).map_err(|e| format!("[{}] {e}", e.code()))?;
             for w in &parsed.warnings {
                 eprintln!("warning: {w}");

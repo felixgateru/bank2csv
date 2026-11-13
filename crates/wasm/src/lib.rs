@@ -4,7 +4,7 @@
 //! import init, { convert, detect, listBanks, version } from "./bank2csv.js";
 //! await init();
 //! try {
-//!   const { csv, meta, warnings } = convert(bytes, { password, bank, lenient, format: "csv" });
+//!   const { csv, meta, warnings } = convert(bytes, { password, bank, lenient, generateIds, format: "csv" });
 //! } catch (e) {
 //!   if (e.code === "ENCRYPTED") askForPassword();
 //! }
@@ -23,6 +23,8 @@ struct JsOptions {
     password: Option<String>,
     bank: Option<String>,
     lenient: bool,
+    /// Generate deterministic `transaction_id`s. Default: true.
+    generate_ids: Option<bool>,
     /// `csv` (default) or `json`.
     format: Option<String>,
     delimiter: Option<char>,
@@ -85,7 +87,15 @@ pub fn convert(bytes: &[u8], opts: JsValue) -> Result<JsValue, JsValue> {
     let opts = options(opts)?;
     let doc = bank2csv_extract::extract(bytes, opts.password.as_deref()).map_err(js_error)?;
     let parsers = bank2csv_banks::parsers();
-    let parsed = registry::parse(&parsers, &doc, &ConvertOptions { bank: opts.bank.clone(), lenient: opts.lenient })
+    let parsed = registry::parse(
+        &parsers,
+        &doc,
+        &ConvertOptions {
+            bank: opts.bank.clone(),
+            lenient: opts.lenient,
+            generate_ids: opts.generate_ids.unwrap_or(true),
+        },
+    )
         .map_err(js_error)?;
     let json = opts.format.as_deref() == Some("json");
     let csv = (!json).then(|| {

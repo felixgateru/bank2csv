@@ -20,7 +20,7 @@ Non-goals for now: OCR of scanned statements (we detect them and return
 
 ```
 HOST (JS/TS) — calls from a Web Worker; convert() is synchronous and CPU-bound
-  convert(bytes, { bank?, password?, lenient? })
+  convert(bytes, { bank?, password?, lenient?, generateIds? })
         │
         ▼
 1. API        convert · detect · list_banks · version
@@ -48,7 +48,8 @@ HOST (JS/TS) — calls from a Web Worker; convert() is synchronous and CPU-bound
 6. MODEL      Statement { bank, layout, account, currency, period,
                           opening?, closing?, total_debits?, total_credits?,
                           transactions }
-              Transaction { date, value_date?, description, reference?,
+              Transaction { transaction_id?, date, value_date?, description,
+                            reference? (bank's own, never generated),
                             amount: Money (signed), balance?: Money }
               Money = i64 minor units. Never f64. Debit/credit are derived on output.
         │
@@ -59,10 +60,17 @@ HOST (JS/TS) — calls from a Web Worker; convert() is synchronous and CPU-bound
               Failed → try next candidate parser; all fail → Unreconciled error
               (lenient: true → return output with reconciled = false)
         │
+7b. IDS       deterministic UUIDv5 transaction_id per row (scheme v1, see 0003);
+              keyed on bank, account, date, amount, balance (or description),
+              occurrence. On by default.
+        │
 8. OUTPUT     CSV / JSON; debit and credit columns derived from the signed amount
+              CSV: transaction_id,date,value_date,description,reference,
+                   debit,credit,amount,balance
         │
         ▼
-  { csv, meta: { bank, layout, reconciled, candidates_tried }, warnings }
+  { csv, meta: { bank, layout, reconciled, candidates_tried,
+                 id_scheme, id_basis }, warnings }
 ```
 
 ### Errors
@@ -145,7 +153,7 @@ scripts/build-wasm.sh          # → pkg/web (ES module) and pkg/node (CommonJS)
 node js/smoke.cjs statement.pdf password-file
 ```
 
-v0.1 binary: 1.07 MB, or 505 KB gzipped, after `wasm-opt -Oz` (1.48 MB / 565 KB without it). PDF parsing dominates.
+v0.1 binary: 1.11 MB, or about 505 KB gzipped, after `wasm-opt -Oz` (1.48 MB / 565 KB without it). PDF parsing dominates.
 
 ## Changelog
 
@@ -153,3 +161,4 @@ v0.1 binary: 1.07 MB, or 505 KB gzipped, after `wasm-opt -Oz` (1.48 MB / 565 KB 
 |---------|------------|--------|
 | 0.1.0   | 2026-11-13 | Initial architecture; I&M Bank Kenya PDF parser as first bank. See [0001](decisions/0001-initial-architecture.md). |
 | 0.1.0   | 2026-11-13 | Changes made while implementing v0.1: decrypt during load, layout in `core`, printed totals in the model. See [0002](decisions/0002-v0.1-implementation.md). |
+| 0.1.0   | 2026-11-13 | Deterministic `transaction_id` (scheme v1); `reference` stays bank-only. See [0003](decisions/0003-transaction-ids.md). |

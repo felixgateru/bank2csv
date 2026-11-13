@@ -8,3 +8,5 @@ description = "Canonical model, parser trait, layout helpers, validation and out
 serde.workspace = true
 serde_json.workspace = true
 thiserror.workspace = true
+# v5 only: SHA-1 name-based UUIDs, no randomness, works on wasm32 without JS glue.
+uuid = { version = "1.29", default-features = false, features = ["v5"] }

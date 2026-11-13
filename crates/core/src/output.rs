@@ -19,7 +19,9 @@ impl Default for CsvOptions {
 pub fn to_csv(stmt: &Statement, opts: &CsvOptions) -> String {
     let d = opts.delimiter;
     let mut out = String::new();
-    let mut header = vec!["date", "value_date", "description", "reference"];
+    // `transaction_id` is always present so the column set doesn't depend on
+    // options; it is empty when id generation is turned off.
+    let mut header = vec!["transaction_id", "date", "value_date", "description", "reference"];
     if opts.split_debit_credit {
         header.extend(["debit", "credit"]);
     }
@@ -28,6 +30,7 @@ pub fn to_csv(stmt: &Statement, opts: &CsvOptions) -> String {
 
     for t in &stmt.transactions {
         let mut row = vec![
+            t.transaction_id.clone().unwrap_or_default(),
             t.date.to_string(),
             t.value_date.map(|v| v.to_string()).unwrap_or_default(),
             t.description.clone(),
@@ -80,6 +83,7 @@ mod tests {
     fn writes_and_escapes() {
         let s = Statement {
             transactions: vec![Transaction {
+                transaction_id: Some("e670159f-3a30-5b1b-aa57-883623cac94b".into()),
                 date: Date::new(2026, 11, 2).unwrap(),
                 value_date: None,
                 description: "Pay, \"Rent\"".into(),
@@ -92,6 +96,6 @@ mod tests {
         };
         let csv = to_csv(&s, &CsvOptions::default());
         let line = csv.lines().nth(1).unwrap();
-        assert_eq!(line, "2026-11-02,,\"Pay, \"\"Rent\"\"\",\"'=SUM(A1)\",1500.50,,-1500.50,10.00");
+        assert_eq!(line, "e670159f-3a30-5b1b-aa57-883623cac94b,2026-11-02,,\"Pay, \"\"Rent\"\"\",\"'=SUM(A1)\",1500.50,,-1500.50,10.00");
     }
 }

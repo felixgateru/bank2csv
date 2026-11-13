@@ -1,16 +1,25 @@
 //! Chooses a parser for a document, runs it and validates the result.
 //! The list of parsers is passed in explicitly (see `bank2csv-banks::parsers()`).
 
+use crate::ids::{self, Basis};
 use crate::validate::{self, Order, Reconciliation};
 use crate::{BankParser, Error, RawDocument, Result, Statement, Tier};
 use serde::Serialize;
 
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone)]
 pub struct ConvertOptions {
     /// Force a parser by id instead of auto-detecting.
     pub bank: Option<String>,
     /// Return output even if validation fails (`reconciled = failed`).
     pub lenient: bool,
+    /// Fill `transaction_id` with deterministic ids (see `ids`). Default: true.
+    pub generate_ids: bool,
+}
+
+impl Default for ConvertOptions {
+    fn default() -> Self {
+        ConvertOptions { bank: None, lenient: false, generate_ids: true }
+    }
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -22,6 +31,10 @@ pub struct Meta {
     /// Parser ids tried, in order. More than one means a fallback happened.
     pub candidates_tried: Vec<String>,
     pub transaction_count: usize,
+    /// Id scheme version (`v1`), or `None` if ids were not generated.
+    pub id_scheme: Option<&'static str>,
+    /// What the ids were keyed on, or `None` if ids were not generated.
+    pub id_basis: Option<Basis>,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -96,7 +109,7 @@ pub fn parse(parsers: &[&dyn BankParser], doc: &RawDocument, opts: &ConvertOptio
     Err(err)
 }
 
-fn finish(stmt: Statement, tried: Vec<String>, opts: &ConvertOptions) -> Result<Parsed> {
+fn finish(mut stmt: Statement, tried: Vec<String>, opts: &ConvertOptions) -> Result<Parsed> {
     let mut warnings = Vec::new();
     let order = validate::date_order(&stmt.transactions);
     if order == Order::Mixed {
@@ -113,6 +126,13 @@ fn finish(stmt: Statement, tried: Vec<String>, opts: &ConvertOptions) -> Result<
     if stmt.transactions.is_empty() {
         warnings.push("no transactions found".to_string());
     }
+    let id_basis = if opts.generate_ids {
+        let (basis, id_warnings) = ids::assign(&mut stmt);
+        warnings.extend(id_warnings);
+        Some(basis)
+    } else {
+        None
+    };
     Ok(Parsed {
         meta: Meta {
             bank: stmt.bank.clone(),
@@ -121,6 +141,8 @@ fn finish(stmt: Statement, tried: Vec<String>, opts: &ConvertOptions) -> Result<
             order,
             candidates_tried: tried,
             transaction_count: stmt.transactions.len(),
+            id_scheme: opts.generate_ids.then_some(ids::SCHEME),
+            id_basis,
         },
         statement: stmt,
         warnings,
